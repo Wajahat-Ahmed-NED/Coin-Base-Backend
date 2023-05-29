@@ -2,6 +2,8 @@ const Joi=require("joi");
 const User=require("../models/user")
 const bcrypt=require("bcrypt")
 const UserDTO = require("../dto/user");
+const JWTService = require("../services/JWTServices");
+
 const authController={
     async register(req,res,next){
         //validate user input
@@ -47,14 +49,28 @@ const authController={
         }
 
         const hashPassword=await bcrypt.hash(password,10);
-        const userToRegister=new User({
-            username,
-            email,
-            name,
-            password:hashPassword
-        })
 
-        const user=await userToRegister.save()
+
+        let accessToken;
+        let refreshToken;
+        try{
+            const userToRegister=new User({
+                username,
+                email,
+                name,
+                password:hashPassword
+            })
+    
+            const user=await userToRegister.save()
+
+            accessToken=JWTService.signAccessToken({_id:user._id,username:user.email},'30m');
+            refreshToken=JWTService.signRefreshToken({_id:user._id},'60m');
+
+        }
+        catch(error){
+
+        }
+      
         //hash password and store in db
         const userDto=new UserDTO(user);
         return res.status(201).json({userDto});
